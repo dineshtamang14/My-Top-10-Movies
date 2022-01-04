@@ -40,6 +40,11 @@ new_movie = Movie(
 # db.session.commit()
 
 
+class Movie_edit(FlaskForm):
+    rating = StringField("Your Rating Out of 10 eg 7.5", validators=[DataRequired()])
+    review = StringField("Your Review")
+
+
 @app.route("/")
 def home():
     movies = db.session.query(Movie).all()
@@ -48,7 +53,10 @@ def home():
 
 @app.route("/update", methods=["POST", "GET"])
 def update():
-    pass
+    if request.method == "GET":
+        movie_id = request.args.get("movie_id")
+        movie = Movie.query.get(movie_id)
+        return render_template("edit.html", movie=movie)
 
 
 if __name__ == '__main__':
