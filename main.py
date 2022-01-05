@@ -12,8 +12,11 @@ Bootstrap(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///Movies.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-key = "35c408cf1163143eb09a109502575306"
-url = "https://api.themoviedb.org/3/search/"
+
+MOVIE_DB_API_KEY = "35c408cf1163143eb09a109502575306"
+MOVIE_DB_SEARCH_URL = "https://api.themoviedb.org/3/search/movie"
+MOVIE_DB_INFO_URL = "https://api.themoviedb.org/3/movie"
+MOVIE_DB_IMAGE_URL = "https://image.tmdb.org/t/p/w500"
 
 
 class Movie(db.Model):
@@ -21,25 +24,27 @@ class Movie(db.Model):
     title = db.Column(db.String(255), unique=True, nullable=False)
     year = db.Column(db.Integer, nullable=False)
     description = db.Column(db.String(255), nullable=False)
-    rating = db.Column(db.Integer, nullable=False)
-    ranking = db.Column(db.Integer, nullable=False)
-    review = db.Column(db.String(255), nullable=False)
+    rating = db.Column(db.Integer)
+    ranking = db.Column(db.Integer)
+    review = db.Column(db.String(255))
     img_url = db.Column(db.String(255), nullable=False)
 
 
 db.create_all()
 
-new_movie = Movie(
-    title="Phone Booth",
-    year=2002,
-    description="Publicist Stuart Shepard finds himself trapped in a phone booth, pinned down by an extortionist's sniper rifle. Unable to leave or receive outside help, Stuart's negotiation with the caller leads to a jaw-dropping climax.",
-    rating=7.3,
-    ranking=10,
-    review="My favourite character was the caller.",
-    img_url="https://image.tmdb.org/t/p/w500/tjrX2oWRCM3Tvarz38zlZM7Uc10.jpg"
-)
-# db.session.add(new_movie)
-# db.session.commit()
+
+def add_new_movie(title, img_url, year, description):
+    new_movie = Movie(
+        title=title,
+        year=year,
+        description=description,
+        rating=None,
+        ranking=None,
+        review=None,
+        img_url=img_url
+    )
+    db.session.add(new_movie)
+    db.session.commit()
 
 
 class Movie_edit(FlaskForm):
@@ -89,10 +94,24 @@ def add_movie():
     elif request.method == "POST":
         if form.validate_on_submit():
             search_movies = form.title.data
-            response = requests.get(f"https://api.themoviedb.org/3/movie/"
-                                    f"{search_movies}?api_key={key}&language=en-US").json()
+            response = requests.get(MOVIE_DB_SEARCH_URL, params={"api_key": MOVIE_DB_API_KEY,
+                                                                 "query": search_movies}).json()['results']
             print(response)
-            return redirect(url_for('add_movie'))
+            return render_template("select.html", movies=response)
+
+
+@app.route("/new_movie")
+def add_new():
+    movie_id = request.args.get("id")
+    if movie_id:
+        response = requests.get(f"{MOVIE_DB_INFO_URL}/{movie_id}", params={"api_key": MOVIE_DB_API_KEY}).json()
+        print(response)
+        title = response["original_title"]
+        img_url = f"{MOVIE_DB_IMAGE_URL}/{response['poster_path']}"
+        year = response["release_date"]
+        description = response["overview"]
+        add_new_movie(title, img_url, year, description)
+    return redirect(url_for('add_movie'))
 
 
 if __name__ == '__main__':
