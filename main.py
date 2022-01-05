@@ -33,20 +33,6 @@ class Movie(db.Model):
 db.create_all()
 
 
-def add_new_movie(title, img_url, year, description):
-    new_movie = Movie(
-        title=title,
-        year=year,
-        description=description,
-        rating=None,
-        ranking=None,
-        review=None,
-        img_url=img_url
-    )
-    db.session.add(new_movie)
-    db.session.commit()
-
-
 class Movie_edit(FlaskForm):
     rating = StringField("Your Rating Out of 10 eg 7.5", validators=[DataRequired()])
     review = StringField("Your Review")
@@ -66,8 +52,12 @@ def home():
         db.session.delete(delete_movie)
         db.session.commit()
         return redirect(url_for("home"))
-    movies = db.session.query(Movie).all()
-    return render_template("index.html", movies=movies)
+    all_movies = Movie.query.order_by(Movie.rating).all()
+    print(all_movies)
+    for i in range(len(all_movies)):
+        all_movies[i].ranking = len(all_movies) - i
+    db.session.commit()
+    return render_template("index.html", movies=all_movies)
 
 
 @app.route("/update", methods=["POST", "GET"])
@@ -104,14 +94,18 @@ def add_movie():
 def add_new():
     movie_id = request.args.get("id")
     if movie_id:
-        response = requests.get(f"{MOVIE_DB_INFO_URL}/{movie_id}", params={"api_key": MOVIE_DB_API_KEY}).json()
+        response = requests.get(f"{MOVIE_DB_INFO_URL}/{movie_id}", params={"api_key": MOVIE_DB_API_KEY,
+                                                                           "language": "en-US"}).json()
         print(response)
-        title = response["original_title"]
-        img_url = f"{MOVIE_DB_IMAGE_URL}/{response['poster_path']}"
-        year = response["release_date"]
-        description = response["overview"]
-        add_new_movie(title, img_url, year, description)
-    return redirect(url_for('add_movie'))
+        new_movie = Movie(
+            title=response["original_title"],
+            year=response["release_date"],
+            description=response["overview"],
+            img_url=f"{MOVIE_DB_IMAGE_URL}/{response['poster_path']}"
+        )
+        db.session.add(new_movie)
+        db.session.commit()
+        return redirect(url_for('update', movie_id=new_movie.id))
 
 
 if __name__ == '__main__':

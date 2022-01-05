@@ -104,8 +104,8 @@
 	 font-weight: 600;
 	 color: #fff;
 	 overflow: hidden;
-	 z-index: 100;
 	 font-family: Poppins, sans-serif;
+	 z-index: 100;
 }
  .front:before {
 	 position: absolute;
@@ -195,7 +195,6 @@
 	 top: 12px;
 }
 .container.add {
-    margin-top: 40px;
     margin-bottom: 20px;
 }
 .rating {
